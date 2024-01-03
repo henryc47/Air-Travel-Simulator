@@ -1,4 +1,5 @@
 import re
+import simulation
 
 class Command_Line_Interface():
     #high level running of the CLI
