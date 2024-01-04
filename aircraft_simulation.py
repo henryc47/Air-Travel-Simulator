@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 g = 9.807#for atmosphere calculations we are just going to assume g is a constant 9.807 m/s, which is close enough to be true when very close to the earth
 
 #airline statistics
-#airlines_statistics = [empty_mass,wing_area,fuselage_length,fuselage_width,fuselage_cd,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_lift_coefficient,critical_angle,angle_of_incidence]
+#structure_statistics = [empty_mass,wing_area,fuselage_length,fuselage_width,fuselage_cd,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_lift_coefficient,critical_angle,angle_of_incidence]
 B787_structure_statistics = [120000,377,57,5.8,0.42,0.016,40,13,1.3,20,3]
-
+#engine_statistics = [fuel_energy,intake_efficiency,turbine_efficiency,air_fuel_ratio,bypass_ratio]
+B787_engine_statistics = [43,0.95,0.45,35,9]
 #calculates the air density at specific latitudes 
 #Based off calculations  found here https://en.wikipedia.org/wiki/Barometric_formula#Density_equations
 #translated from an equivalent MATLAB calculator I built for my AMME2500 Assignment 3
@@ -137,4 +138,25 @@ class Structure():
 
 
 class Engine():
-    pass
+    def __init__(self,fuel_energy,intake_efficiency,turbine_efficiency,air_fuel_ratio,bypass_ratio,max_power):
+        self.fuel_energy = fuel_energy #energy of the fuel in MJ
+        self.intake_efficiency = intake_efficiency
+        self.turbine_efficiency = turbine_efficiency
+        self.air_fuel_ratio = air_fuel_ratio
+        self.bypass_ratio = bypass_ratio
+        self.total_air_fuel_ratio = air_fuel_ratio*(bypass_ratio+1)
+    
+    def exhaust_velocity_calc(self,intake_airspeed):
+        energy_incoming_air =(intake_airspeed**2)*0.5#energy of incoming air in J/kg
+        exhaust_energy = (((energy_incoming_air*self.intake_efficiency)*self.total_air_fuel_ratio)+(self.fuel_energy*1000000)*self.turbine_efficiency)/(self.total_air_fuel_ratio+1)#energy of exhaust stream in J/kg
+        exhaust_velocity = math.sqrt(2*exhaust_energy)#calculate the exhaust velocity of exhaust stream
+        exhaust_velocity_gain = exhaust_velocity-(intake_airspeed*self.total_air_fuel_ratio/(self.total_air_fuel_ratio+1))#calculate the gain in velocity
+        effective_exhaust_velocity = exhaust_velocity_gain*(self.total_air_fuel_ratio+1)#calculate the effective exhaust velocity
+        return exhaust_velocity_gain,effective_exhaust_velocity
+    
+
+
+
+#some examples
+B787_structure = Structure(*B787_structure_statistics)
+B787_engine = Engine(*B787_engine_statistics)
