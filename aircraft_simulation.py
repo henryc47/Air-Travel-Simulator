@@ -1,10 +1,14 @@
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 #calculate technical parameters of aircraft flight
 
 #constants
 g = 9.807#for atmosphere calculations we are just going to assume g is a constant 9.807 m/s, which is close enough to be true when very close to the earth
 
+#airline statistics
+#airlines_statistics = [empty_mass,wing_area,fuselage_length,fuselage_width,fuselage_cd,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_lift_coefficient,critical_angle,angle_of_incidence]
+B787_structure_statistics = [120000,377,57,5.8,0.42,0.016,40,13,1.3,20,3]
 
 #calculates the air density at specific latitudes 
 #Based off calculations  found here https://en.wikipedia.org/wiki/Barometric_formula#Density_equations
@@ -44,3 +48,93 @@ def air_density_calc(altitude):
     #air density is negligible
     air_density = 0;
     return air_density
+
+class Plane():
+    def __init__(self,structure,engine,num_engines):
+        self.structure = structure
+        self.engine = engine
+        self.num_engines = num_engines
+        
+
+
+class Structure():
+    def __init__(self,empty_mass,wing_area,fuselage_length,fuselage_width,fuselage_cd,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_angle,angle_of_incidence):
+        self.empty_mass = empty_mass #mass with no fuel or passengers
+        self.wing_area = wing_area #area of the wings, m^2
+        self.fuselage_length = fuselage_length #length of the fuselage (cabin cylinder), m
+        self.fuselage_width = fuselage_width #width of the fuselage, m
+        self.fueselage_cd = fuselage_cd #drag coefficient of the fuselage, half sphere = 0.42
+        self.zero_lift_cd = zero_lift_cd #drag coefficient (/m^2 wing area), unrelated to lift
+        self.lift_to_drag_ratio_linear = lift_to_drag_ratio_linear #amount of lift generated per unit drag during the linear region (note drag will continue increasing linearly beyond this region even as lift does not)
+        self.max_linear_angle_of_attack = math.radians(max_linear_angle_of_attack) #angle of attack (in degrees) where lift stops linearing increasing with angle of attack
+        self.max_linear_lift_coefficient = max_linear_lift_coefficient#lift coefficient at the max_linear_angle_of_attack
+        self.linear_lift_coefficient = self.max_linear_lift_coefficient/self.max_linear_angle_of_attack#lift coefficient per radian
+        self.critical_angle = math.radians(critical_angle)#angle of attack at which lift reaches a maximum
+        self.additional_lift_angle = self.critical_angle-self.max_linear_angle_of_attack
+        self.angle_of_incidence = math.radians(angle_of_incidence)#angle of attack when the aeroplane is in level flight (how much are the wings tilted up/cambered)
+        self.fuselage_area = self.fuselage_length*self.fuselage_width
+
+    #velocity angle of the plane, function only valid for positive x_velocity
+    def calculate_velocity_angle(self,x_velocity,y_velocity):
+        velocity = math.sqrt((x_velocity**2)+(y_velocity**2))
+        angle = math.asin(y_velocity/velocity)
+        return angle
+
+    def calculate_angle_of_attack(self,pitch_angle,velocity_angle):
+        angle_of_attack = pitch_angle-velocity_angle
+        return angle_of_attack
+    
+    def calculate_effective_angle_of_attack(self,pitch_angle,velocity_angle):
+        effective_angle_of_attack = (pitch_angle-velocity_angle)+self.angle_of_incidence
+        return effective_angle_of_attack
+
+    def calculate_lift_coefficient_at_effective_angle_of_attack(self,effective_angle_of_attack):
+        if (effective_angle_of_attack >= -self.max_linear_angle_of_attack) and (effective_angle_of_attack <= self.max_linear_angle_of_attack):
+            lift_coefficient = self.linear_lift_coefficient*effective_angle_of_attack
+            stall = False
+        elif (effective_angle_of_attack >= -self.critical_angle) and (effective_angle_of_attack <= self.critical_angle):
+            angle_abs = abs(effective_angle_of_attack)
+            this_additional_lift_angle = angle_abs-self.max_linear_angle_of_attack
+            additional_lift_fraction = this_additional_lift_angle/self.additional_lift_angle
+            additional_lift_coefficient = this_additional_lift_angle*((1+(1-additional_lift_fraction))/2)*self.linear_lift_coefficient
+            lift_coefficient = additional_lift_coefficient + self.max_linear_lift_coefficient
+            if effective_angle_of_attack<0:
+                lift_coefficient = -lift_coefficient
+            stall = False
+        elif (effective_angle_of_attack > -self.critical_angle*2) and (effective_angle_of_attack < self.critical_angle*2):
+                if effective_angle_of_attack<0:
+                    mirror_angle_of_attack = (-self.critical_angle*2)-effective_angle_of_attack
+                else:
+                    mirror_angle_of_attack = (self.critical_angle*2)-effective_angle_of_attack
+                lift_coefficient,stall = self.calculate_lift_coefficient_at_effective_angle_of_attack(mirror_angle_of_attack)
+                stall = True
+        else:
+            lift_coefficient = 0
+            stall = True
+        
+        return lift_coefficient,stall
+    
+    def calculate_lift_coefficient_at_angle_of_attack(self,angle_of_attack):
+        effective_angle_of_attack = angle_of_attack + self.angle_of_incidence
+        lift_coefficient,stall = self.calculate_lift_coefficient_at_effective_angle_of_attack(effective_angle_of_attack)
+        return lift_coefficient
+
+    #plots lift coefficient by angle of attack
+    def plot_lift_coefficient(self,start_angle,end_angle,increment):
+        angles = np.arange(start_angle,end_angle+increment,increment)
+        angles_degrees = list(angles)
+        angles = list(np.radians(angles))
+        lift_coefficients = []
+        for angle in angles:
+            lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle)
+            lift_coefficients.append(lift_coefficient)
+        #now plot
+        #print(angles_degrees)
+        #print(lift_coefficients)
+        plt.figure()
+        plt.plot(angles_degrees,lift_coefficients)
+        plt.show(block=False)
+
+
+class Engine():
+    pass
