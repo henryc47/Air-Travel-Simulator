@@ -14,7 +14,7 @@ B787_engine_statistics = [43,0.95,0.45,35,9,300,1.2]
 #calculates the air density at specific latitudes 
 #Based off calculations  found here https://en.wikipedia.org/wiki/Barometric_formula#Density_equations
 #translated from an equivalent MATLAB calculator I built for my AMME2500 Assignment 3
-def air_density_calc(altitude):
+def calculate_air_density(altitude):
     molar_mass_air = 0.02896#molar mass of earths air, kg/mol
     R = 8.314;#the universal gas constant.
     max_altitudes =[11000,20000,32000,47000,51000,71000,86000]#maximum altitude in atmospheric layers
@@ -136,6 +136,11 @@ class Structure():
         plt.plot(angles_degrees,lift_coefficients)
         plt.show(block=False)
 
+    #calculate lift (N) during steady cruise
+    def calculate_lift_wing(self,airspeed,angle_of_attack,altitude):
+        lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle_of_attack)
+        air_density = 
+
 
 class Engine():
     def __init__(self,fuel_energy,intake_efficiency,turbine_efficiency,air_fuel_ratio,bypass_ratio,max_thrust,density_at_max_thrust):
@@ -162,7 +167,6 @@ class Engine():
         else:
             max_thrust = (intake_air_density/self.density_at_max_thrust)*self.max_thrust
         return max_thrust
-
 
 
 #some examples
