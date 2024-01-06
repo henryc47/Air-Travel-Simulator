@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 g = 9.807#for atmosphere calculations we are just going to assume g is a constant 9.807 m/s, which is close enough to be true when very close to the earth
 
 #airline statistics
-#structure_statistics = [empty_mass,wing_area,fuselage_length,fuselage_width,fuselage_cd,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_lift_coefficient,critical_angle,angle_of_incidence]
-B787_structure_statistics = [120000,377,57,5.8,0.42,0.016,40,13,1.3,20,3]
+#structure_statistics = [empty_mass,wing_area,fuselage_length,fuselage_width,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_lift_coefficient,critical_angle,angle_of_incidence]
+B787_structure_statistics = [120000,377,57,5.8,0.012,40,13,1.3,20,3]
 #engine_statistics = [fuel_energy,intake_efficiency,turbine_efficiency,air_fuel_ratio,bypass_ratio,max_thrust,max_thrust_density]
 B787_engine_statistics = [43,0.95,0.45,35,9,300,1.2]
 #calculates the air density at specific latitudes 
@@ -59,12 +59,11 @@ class Plane():
 
 
 class Structure():
-    def __init__(self,empty_mass,wing_area,fuselage_length,fuselage_width,fuselage_cd,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_angle,angle_of_incidence):
+    def __init__(self,empty_mass,wing_area,fuselage_length,fuselage_width,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_angle,angle_of_incidence):
         self.empty_mass = empty_mass #mass with no fuel or passengers
         self.wing_area = wing_area #area of the wings, m^2
         self.fuselage_length = fuselage_length #length of the fuselage (cabin cylinder), m
         self.fuselage_width = fuselage_width #width of the fuselage, m
-        self.fueselage_cd = fuselage_cd #drag coefficient of the fuselage, half sphere = 0.42
         self.zero_lift_cd = zero_lift_cd #drag coefficient (/m^2 wing area), unrelated to lift
         self.lift_to_drag_ratio_linear = lift_to_drag_ratio_linear #amount of lift generated per unit drag during the linear region (note drag will continue increasing linearly beyond this region even as lift does not)
         self.max_linear_angle_of_attack = math.radians(max_linear_angle_of_attack) #angle of attack (in degrees) where lift stops linearing increasing with angle of attack
@@ -119,7 +118,45 @@ class Structure():
         effective_angle_of_attack = angle_of_attack + self.angle_of_incidence
         lift_coefficient,stall = self.calculate_lift_coefficient_at_effective_angle_of_attack(effective_angle_of_attack)
         return lift_coefficient
+    
+    def calculate_induced_wing_drag_coefficient_at_angle_of_attack(self,angle_of_attack):
+        effective_angle_of_attack = abs(angle_of_attack + self.angle_of_incidence)
+        induced_wing_drag_coefficient = (effective_angle_of_attack*self.linear_lift_coefficient)/self.lift_to_drag_ratio_linear
+        return induced_wing_drag_coefficient
 
+    def calculate_induced_fuselage_drag_coefficient_at_angle_of_attack(self,angle_of_attack):
+        effective_angle_of_attack = abs(angle_of_attack)
+        induced_fuselage_drag_coefficient = (effective_angle_of_attack*self.linear_lift_coefficient)/self.lift_to_drag_ratio_linear
+        return induced_fuselage_drag_coefficient
+
+
+    #calculate lift (N), this is perpindicular to relative wind speed, and induced drag (N), which is inline with relative wind speed
+    def calculate_lift(self,airspeed,angle_of_attack,altitude):
+        lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle_of_attack)
+        air_density = calculate_air_density(altitude)
+        lift = air_density*lift_coefficient*self.wing_area*(airspeed**2)*0.5
+        return lift
+    
+    #calculate the drag induced by the wing at a particular angle of attack
+    def calculate_induced_wing_drag(self,airspeed,angle_of_attack,altitude):
+        induced_wing_drag_coefficient = self.calculate_induced_wing_drag_coefficient_at_angle_of_attack(angle_of_attack)
+        air_density = calculate_air_density(altitude)
+        induced_wing_drag = air_density*induced_wing_drag_coefficient*self.wing_area*(airspeed**2)*0.5
+        return induced_wing_drag 
+    
+    #calculate the drag induced by the fuselage not being in line with the airstream (occurs during pitch up/pitch down movements)
+    def calculate_fuselage_drag(self,airspeed,angle_of_attack,altitude):
+        air_density = calculate_air_density(altitude)
+        induced_fuselage_drag_coefficient = self.calculate_induced_fuselage_drag_coefficient_at_angle_of_attack(angle_of_attack)
+        fuselage_drag = air_density*self.fuselage_area*induced_fuselage_drag_coefficient*(airspeed**2)*0.5
+        return fuselage_drag
+
+    #calculate the parasitic drag
+    def calculate_parasitic_drag(self,airspeed,altitude):
+        air_density = calculate_air_density(altitude)
+        parasitic_drag = air_density*self.wing_area*(airspeed**2)*0.5*self.zero_lift_cd
+        return parasitic_drag
+    
     #plots lift coefficient by angle of attack
     def plot_lift_coefficient(self,start_angle,end_angle,increment):
         angles = np.arange(start_angle,end_angle+increment,increment)
@@ -132,14 +169,59 @@ class Structure():
         #now plot
         #print(angles_degrees)
         #print(lift_coefficients)
-        plt.figure()
+        plt.figure(1)
         plt.plot(angles_degrees,lift_coefficients)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Lift Coefficient')
         plt.show(block=False)
-
-    #calculate lift (N) during steady cruise
-    def calculate_lift_wing(self,airspeed,angle_of_attack,altitude):
-        lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle_of_attack)
-        air_density = 
+    
+    #plots lift and the components of drag by angle of attack
+    def plot_lift_and_drag(self,airspeed,altitude,start_angle,end_angle,increment):
+        angles = np.arange(start_angle,end_angle+increment,increment)
+        angles_degrees = list(angles)
+        angles = list(np.radians(angles))
+        lifts = []
+        lift_induced_wing_drags = []
+        lift_induced_fuselage_drags = []
+        parasitic_drags = []
+        lift_to_drags = []
+        for angle in angles:
+            lift = self.calculate_lift(airspeed,angle,altitude)
+            lift_induced_wing_drag = self.calculate_induced_wing_drag(airspeed,angle,altitude)
+            lift_induced_fuselage_drag = self.calculate_fuselage_drag(airspeed,angle,altitude)
+            parasitic_drag = self.calculate_parasitic_drag(airspeed,altitude)
+            lift_to_drag = lift/(parasitic_drag+lift_induced_wing_drag+lift_induced_fuselage_drag)
+            lifts.append(lift)
+            lift_induced_wing_drags.append(lift_induced_wing_drag)
+            lift_induced_fuselage_drags.append(lift_induced_fuselage_drag)
+            parasitic_drags.append(parasitic_drag)
+            lift_to_drags.append(lift_to_drag)
+        #now plot
+        plt.figure(1)
+        plt.plot(angles_degrees,lifts)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Lift (N)')
+        plt.show(block=False)
+        plt.figure(2)
+        plt.plot(angles_degrees,lift_induced_wing_drags)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Lift Induced Wing Drag (N)')
+        plt.show(block=False)
+        plt.figure(3)
+        plt.plot(angles_degrees,lift_induced_fuselage_drags)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Lift Induced Fuselage Drag (N)')
+        plt.show(block=False)
+        plt.figure(4)
+        plt.plot(angles_degrees,parasitic_drags)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Parasitic Drag (N)')
+        plt.show(block=False)
+        plt.figure(5)
+        plt.plot(angles_degrees,lift_to_drags)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Lift to Drag')
+        plt.show(block=False)
 
 
 class Engine():
@@ -167,7 +249,6 @@ class Engine():
         else:
             max_thrust = (intake_air_density/self.density_at_max_thrust)*self.max_thrust
         return max_thrust
-
 
 #some examples
 B787_structure = Structure(*B787_structure_statistics)
