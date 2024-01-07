@@ -51,6 +51,12 @@ def calculate_air_density(altitude : float) -> float:
     air_density = 0
     return air_density
 
+    #velocity angle of the plane, function only valid for positive x_velocity
+def calculate_velocity_angle(x_velocity : float,y_velocity : float) -> float:
+    velocity = math.sqrt((x_velocity**2)+(y_velocity**2))
+    angle = math.asin(y_velocity/velocity)
+    return angle,velocity
+
 class Structure():
     def __init__(self,empty_mass : float,wing_area : float,fuselage_length : float,fuselage_width : float,zero_lift_cd : float,lift_to_drag_ratio_linear : float,max_linear_angle_of_attack : float,max_linear_lift_coefficient : float,critical_angle : float,angle_of_incidence : float):
         self.empty_mass = empty_mass #mass with no fuel or passengers
@@ -66,12 +72,6 @@ class Structure():
         self.additional_lift_angle = self.critical_angle-self.max_linear_angle_of_attack
         self.angle_of_incidence = math.radians(angle_of_incidence)#angle of attack when the aeroplane is in level flight (how much are the wings tilted up/cambered)
         self.fuselage_area = self.fuselage_length*self.fuselage_width
-
-    #velocity angle of the plane, function only valid for positive x_velocity
-    def calculate_velocity_angle(self,x_velocity : float,y_velocity : float) -> float:
-        velocity = math.sqrt((x_velocity**2)+(y_velocity**2))
-        angle = math.asin(y_velocity/velocity)
-        return angle
 
     def calculate_angle_of_attack(self,pitch_angle : float,velocity_angle : float) -> float:
         angle_of_attack = pitch_angle-velocity_angle
@@ -255,12 +255,12 @@ class Plane():
 
     #calculate x,y forces excluding thrust
     def calculate_balance_of_forces(self,load_mass : float,x_velocity : float,y_velocity : float,pitch : float,altitude : float):
-        weight_force = self.calculate_weight_force(load_mass)
-        velocity_angle = self.structure.calculate_velocity_angle(x_velocity,y_velocity)
+        velocity,velocity_angle = calculate_velocity_angle(x_velocity,y_velocity)
         angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
         air_density = calculate_air_density(altitude)
-        #lift = self.structure.calculate_lift()
-        #self.engine.calculate_max_thrust
+        weight_force = self.calculate_weight_force(load_mass)
+        lift = self.structure.calculate_lift()
+        lift_induced_wing_drag = self.structure.calculate_induced_wing_drag(angle_of_attack)
 
 #some examples
 B787_structure = Structure(*B787_structure_statistics)
