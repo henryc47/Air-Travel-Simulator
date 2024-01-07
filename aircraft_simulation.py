@@ -51,30 +51,8 @@ def calculate_air_density(altitude : float) -> float:
     air_density = 0
     return air_density
 
-class Plane():
-    def __init__(self,structure,engine,num_engines):
-        self.structure = structure
-        self.engine = engine
-        self.num_engines = num_engines
-    
-    #calculate the weight force in N
-    def calculate_weight_force(self,load_mass):
-        weight_force = (load_mass+self.structure.empty_mass)*g
-        return weight_force
-
-    #calculate x,y forces excluding thrust
-    def calculate_balance_of_forces(self,load_mass,x_velocity,y_velocity,pitch,altitude):
-        weight_force = self.calculate_weight_force(load_mass)
-        velocity_angle = self.structure.calculate_velocity_angle(x_velocity,y_velocity)
-        angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
-        air_density = calculate_air_density(altitude)
-        lift = self.structure.calculate_lift()
-
-
-
-
 class Structure():
-    def __init__(self,empty_mass,wing_area,fuselage_length,fuselage_width,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_angle,angle_of_incidence):
+    def __init__(self,empty_mass : float,wing_area : float,fuselage_length : float,fuselage_width : float,zero_lift_cd : float,lift_to_drag_ratio_linear : float,max_linear_angle_of_attack : float,max_linear_lift_coefficient : float,critical_angle : float,angle_of_incidence : float):
         self.empty_mass = empty_mass #mass with no fuel or passengers
         self.wing_area = wing_area #area of the wings, m^2
         self.fuselage_length = fuselage_length #length of the fuselage (cabin cylinder), m
@@ -90,20 +68,20 @@ class Structure():
         self.fuselage_area = self.fuselage_length*self.fuselage_width
 
     #velocity angle of the plane, function only valid for positive x_velocity
-    def calculate_velocity_angle(self,x_velocity,y_velocity):
+    def calculate_velocity_angle(self,x_velocity : float,y_velocity : float) -> float:
         velocity = math.sqrt((x_velocity**2)+(y_velocity**2))
         angle = math.asin(y_velocity/velocity)
         return angle
 
-    def calculate_angle_of_attack(self,pitch_angle,velocity_angle):
+    def calculate_angle_of_attack(self,pitch_angle : float,velocity_angle : float) -> float:
         angle_of_attack = pitch_angle-velocity_angle
         return angle_of_attack
     
-    def calculate_effective_angle_of_attack(self,pitch_angle,velocity_angle):
+    def calculate_effective_angle_of_attack(self,pitch_angle : float,velocity_angle : float) -> float:
         effective_angle_of_attack = (pitch_angle-velocity_angle)+self.angle_of_incidence
         return effective_angle_of_attack
 
-    def calculate_lift_coefficient_at_effective_angle_of_attack(self,effective_angle_of_attack):
+    def calculate_lift_coefficient_at_effective_angle_of_attack(self,effective_angle_of_attack : float) -> tuple[float,bool]:
         if (effective_angle_of_attack >= -self.max_linear_angle_of_attack) and (effective_angle_of_attack <= self.max_linear_angle_of_attack):
             lift_coefficient = self.linear_lift_coefficient*effective_angle_of_attack
             stall = False
@@ -129,51 +107,53 @@ class Structure():
         
         return lift_coefficient,stall
     
-    def calculate_lift_coefficient_at_angle_of_attack(self,angle_of_attack):
+    #calculate the coefficient of lift based on the actual angle of attack
+    def calculate_lift_coefficient_at_angle_of_attack(self,angle_of_attack : float) -> float:
         effective_angle_of_attack = angle_of_attack + self.angle_of_incidence
         lift_coefficient,stall = self.calculate_lift_coefficient_at_effective_angle_of_attack(effective_angle_of_attack)
         return lift_coefficient
     
-    def calculate_induced_wing_drag_coefficient_at_angle_of_attack(self,angle_of_attack):
+    #calculate the induced (by lift) drag coefficient for the wing based on the actual angle of attack
+    def calculate_induced_wing_drag_coefficient_at_angle_of_attack(self,angle_of_attack : float) -> float:
         effective_angle_of_attack = abs(angle_of_attack + self.angle_of_incidence)
         induced_wing_drag_coefficient = (effective_angle_of_attack*self.linear_lift_coefficient)/self.lift_to_drag_ratio_linear
         return induced_wing_drag_coefficient
 
-    def calculate_induced_fuselage_drag_coefficient_at_angle_of_attack(self,angle_of_attack):
+    #calculate the induced (by lift) drag coefficient for the fuselage based on the actual angle of attack
+    def calculate_induced_fuselage_drag_coefficient_at_angle_of_attack(self,angle_of_attack : float) -> float:
         effective_angle_of_attack = abs(angle_of_attack)
         induced_fuselage_drag_coefficient = (effective_angle_of_attack*self.linear_lift_coefficient)/self.lift_to_drag_ratio_linear
         return induced_fuselage_drag_coefficient
 
-
-    #calculate lift (N), this is perpindicular to relative wind speed, and induced drag (N), which is inline with relative wind speed
-    def calculate_lift(self,airspeed,angle_of_attack,air_density):
+    #calculate lift (N), this is perpindicular to relative wind speed
+    def calculate_lift(self,airspeed : float,angle_of_attack : float,air_density : float) -> float:
         lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle_of_attack)
         lift = air_density*lift_coefficient*self.wing_area*(airspeed**2)*0.5
         return lift
     
     #calculate the drag induced by the wing at a particular angle of attack
-    def calculate_induced_wing_drag(self,airspeed,angle_of_attack,air_density):
+    def calculate_induced_wing_drag(self,airspeed : float,angle_of_attack : float,air_density : float) -> float:
         induced_wing_drag_coefficient = self.calculate_induced_wing_drag_coefficient_at_angle_of_attack(angle_of_attack)
         induced_wing_drag = air_density*induced_wing_drag_coefficient*self.wing_area*(airspeed**2)*0.5
         return induced_wing_drag 
     
     #calculate the drag induced by the fuselage not being in line with the airstream (occurs during pitch up/pitch down movements)
-    def calculate_fuselage_drag(self,airspeed,angle_of_attack,air_density):
+    def calculate_fuselage_drag(self,airspeed : float,angle_of_attack : float,air_density : float) -> float:
         induced_fuselage_drag_coefficient = self.calculate_induced_fuselage_drag_coefficient_at_angle_of_attack(angle_of_attack)
         fuselage_drag = air_density*self.fuselage_area*induced_fuselage_drag_coefficient*(airspeed**2)*0.5
         return fuselage_drag
 
     #calculate the parasitic drag
-    def calculate_parasitic_drag(self,airspeed,air_density):
+    def calculate_parasitic_drag(self,airspeed : float,air_density : float) -> float:
         parasitic_drag = air_density*self.wing_area*(airspeed**2)*0.5*self.zero_lift_cd
         return parasitic_drag
     
     #plots lift coefficient by angle of attack
-    def plot_lift_coefficient(self,start_angle,end_angle,increment):
+    def plot_lift_coefficient(self,start_angle : float,end_angle : float,increment : float) -> float:
         angles = np.arange(start_angle,end_angle+increment,increment)
         angles_degrees = list(angles)
-        angles = list(np.radians(angles))
-        lift_coefficients = []
+        angles : list[float] = list(np.radians(angles))
+        lift_coefficients : list[float] = []
         for angle in angles:
             lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle)
             lift_coefficients.append(lift_coefficient)
@@ -187,15 +167,15 @@ class Structure():
         plt.show(block=False)
     
     #plots lift and the components of drag by angle of attack
-    def plot_lift_and_drag(self,airspeed,altitude,start_angle,end_angle,increment):
+    def plot_lift_and_drag(self,airspeed : float,altitude : float,start_angle : float,end_angle : float,increment : float):
         angles = np.arange(start_angle,end_angle+increment,increment)
         angles_degrees = list(angles)
-        angles = list(np.radians(angles))
-        lifts = []
-        lift_induced_wing_drags = []
-        lift_induced_fuselage_drags = []
-        parasitic_drags = []
-        lift_to_drags = []
+        angles : list[float] = list(np.radians(angles))
+        lifts : list[float] = [] 
+        lift_induced_wing_drags : list[float] = []
+        lift_induced_fuselage_drags : list[float] = []
+        parasitic_drags : list[float] = []
+        lift_to_drags : list[float] = []
         air_density = calculate_air_density(altitude)
         for angle in angles:
             lift = self.calculate_lift(airspeed,angle,air_density)
@@ -237,17 +217,17 @@ class Structure():
 
 
 class Engine():
-    def __init__(self,fuel_energy,intake_efficiency,turbine_efficiency,air_fuel_ratio,bypass_ratio,max_thrust,density_at_max_thrust):
+    def __init__(self,fuel_energy : float,intake_efficiency : float,turbine_efficiency : float,air_fuel_ratio : float,bypass_ratio : float,max_thrust : float,density_at_max_thrust : float):
         self.fuel_energy = fuel_energy #energy of the fuel in MJ
-        self.intake_efficiency = intake_efficiency
-        self.turbine_efficiency = turbine_efficiency
-        self.air_fuel_ratio = air_fuel_ratio
-        self.bypass_ratio = bypass_ratio
-        self.total_air_fuel_ratio = air_fuel_ratio*(bypass_ratio+1)
-        self.max_thrust = max_thrust
-        self.density_at_max_thrust = density_at_max_thrust
+        self.intake_efficiency = intake_efficiency #intake efficiency (what fraction of momentum of incoming air is preserved) as coefficient
+        self.turbine_efficiency = turbine_efficiency #turbine efficiency (what fraction of fuel energy is converted into thrust) as coefficient
+        self.air_fuel_ratio = air_fuel_ratio #air fuel ratio, air/fuel, combustion chamber only
+        self.bypass_ratio = bypass_ratio #bypass ratio, bypass air/combustion air
+        self.total_air_fuel_ratio = air_fuel_ratio*(bypass_ratio+1) #total air (combustion + bypass)/fuel ratio
+        self.max_thrust = max_thrust #max thrust, N
+        self.density_at_max_thrust = density_at_max_thrust #air density at which max thrust occurs
     
-    def calculate_exhaust_velocity(self,intake_airspeed):
+    def calculate_exhaust_velocity(self,intake_airspeed : float) -> tuple[float,float]:
         energy_incoming_air =(intake_airspeed**2)*0.5#energy of incoming air in J/kg
         exhaust_energy = (((energy_incoming_air*self.intake_efficiency)*self.total_air_fuel_ratio)+(self.fuel_energy*1000000)*self.turbine_efficiency)/(self.total_air_fuel_ratio+1)#energy of exhaust stream in J/kg
         exhaust_velocity = math.sqrt(2*exhaust_energy)#calculate the exhaust velocity of exhaust stream
@@ -255,12 +235,32 @@ class Engine():
         effective_exhaust_velocity = exhaust_velocity_gain*(self.total_air_fuel_ratio+1)#calculate the effective exhaust velocity
         return exhaust_velocity_gain,effective_exhaust_velocity
     
-    def calculate_max_thrust(self,intake_air_density):
+    def calculate_max_thrust(self,intake_air_density : float) -> float:
         if intake_air_density>self.density_at_max_thrust:
             max_thrust = self.max_thrust
         else:
             max_thrust = (intake_air_density/self.density_at_max_thrust)*self.max_thrust
         return max_thrust
+
+class Plane():
+    def __init__(self,structure : Structure,engine : Engine,num_engines : int):
+        self.structure = structure
+        self.engine = engine
+        self.num_engines = num_engines
+    
+    #calculate the weight force in N
+    def calculate_weight_force(self,load_mass : float) -> float:
+        weight_force = (load_mass+self.structure.empty_mass)*g
+        return weight_force
+
+    #calculate x,y forces excluding thrust
+    def calculate_balance_of_forces(self,load_mass : float,x_velocity : float,y_velocity : float,pitch : float,altitude : float):
+        weight_force = self.calculate_weight_force(load_mass)
+        velocity_angle = self.structure.calculate_velocity_angle(x_velocity,y_velocity)
+        angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
+        air_density = calculate_air_density(altitude)
+        #lift = self.structure.calculate_lift()
+        #self.engine.calculate_max_thrust
 
 #some examples
 B787_structure = Structure(*B787_structure_statistics)
