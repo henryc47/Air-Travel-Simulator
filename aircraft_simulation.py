@@ -61,7 +61,14 @@ class Plane():
     def calculate_weight_force(self,load_mass):
         weight_force = (load_mass+self.structure.empty_mass)*g
         return weight_force
-    
+
+    #calculate x,y forces excluding thrust
+    def calculate_balance_of_forces(self,load_mass,x_velocity,y_velocity,pitch,altitude):
+        weight_force = self.calculate_weight_force(load_mass)
+        velocity_angle = self.structure.calculate_velocity_angle(x_velocity,y_velocity)
+
+
+
 
 
 
@@ -140,29 +147,25 @@ class Structure():
 
 
     #calculate lift (N), this is perpindicular to relative wind speed, and induced drag (N), which is inline with relative wind speed
-    def calculate_lift(self,airspeed,angle_of_attack,altitude):
+    def calculate_lift(self,airspeed,angle_of_attack,air_density):
         lift_coefficient = self.calculate_lift_coefficient_at_angle_of_attack(angle_of_attack)
-        air_density = calculate_air_density(altitude)
         lift = air_density*lift_coefficient*self.wing_area*(airspeed**2)*0.5
         return lift
     
     #calculate the drag induced by the wing at a particular angle of attack
-    def calculate_induced_wing_drag(self,airspeed,angle_of_attack,altitude):
+    def calculate_induced_wing_drag(self,airspeed,angle_of_attack,air_density):
         induced_wing_drag_coefficient = self.calculate_induced_wing_drag_coefficient_at_angle_of_attack(angle_of_attack)
-        air_density = calculate_air_density(altitude)
         induced_wing_drag = air_density*induced_wing_drag_coefficient*self.wing_area*(airspeed**2)*0.5
         return induced_wing_drag 
     
     #calculate the drag induced by the fuselage not being in line with the airstream (occurs during pitch up/pitch down movements)
-    def calculate_fuselage_drag(self,airspeed,angle_of_attack,altitude):
-        air_density = calculate_air_density(altitude)
+    def calculate_fuselage_drag(self,airspeed,angle_of_attack,air_density):
         induced_fuselage_drag_coefficient = self.calculate_induced_fuselage_drag_coefficient_at_angle_of_attack(angle_of_attack)
         fuselage_drag = air_density*self.fuselage_area*induced_fuselage_drag_coefficient*(airspeed**2)*0.5
         return fuselage_drag
 
     #calculate the parasitic drag
-    def calculate_parasitic_drag(self,airspeed,altitude):
-        air_density = calculate_air_density(altitude)
+    def calculate_parasitic_drag(self,airspeed,air_density):
         parasitic_drag = air_density*self.wing_area*(airspeed**2)*0.5*self.zero_lift_cd
         return parasitic_drag
     
@@ -194,11 +197,12 @@ class Structure():
         lift_induced_fuselage_drags = []
         parasitic_drags = []
         lift_to_drags = []
+        air_density = calculate_air_density(altitude)
         for angle in angles:
-            lift = self.calculate_lift(airspeed,angle,altitude)
-            lift_induced_wing_drag = self.calculate_induced_wing_drag(airspeed,angle,altitude)
-            lift_induced_fuselage_drag = self.calculate_fuselage_drag(airspeed,angle,altitude)
-            parasitic_drag = self.calculate_parasitic_drag(airspeed,altitude)
+            lift = self.calculate_lift(airspeed,angle,air_density)
+            lift_induced_wing_drag = self.calculate_induced_wing_drag(airspeed,angle,air_density)
+            lift_induced_fuselage_drag = self.calculate_fuselage_drag(airspeed,angle,air_density)
+            parasitic_drag = self.calculate_parasitic_drag(airspeed,air_density)
             lift_to_drag = lift/(parasitic_drag+lift_induced_wing_drag+lift_induced_fuselage_drag)
             lifts.append(lift)
             lift_induced_wing_drags.append(lift_induced_wing_drag)
