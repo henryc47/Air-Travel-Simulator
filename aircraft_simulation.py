@@ -52,10 +52,11 @@ def calculate_air_density(altitude : float) -> float:
     return air_density
 
     #velocity angle of the plane, function only valid for positive x_velocity
-def calculate_velocity_angle(x_velocity : float,y_velocity : float) -> float:
+
+def calculate_velocity_angle(x_velocity : float,y_velocity : float) -> tuple[float,float]:
     velocity = math.sqrt((x_velocity**2)+(y_velocity**2))
     angle = math.asin(y_velocity/velocity)
-    return angle,velocity
+    return velocity,angle
 
 class Structure():
     def __init__(self,empty_mass : float,wing_area : float,fuselage_length : float,fuselage_width : float,zero_lift_cd : float,lift_to_drag_ratio_linear : float,max_linear_angle_of_attack : float,max_linear_lift_coefficient : float,critical_angle : float,angle_of_incidence : float):
@@ -256,11 +257,64 @@ class Plane():
     #calculate x,y forces excluding thrust
     def calculate_balance_of_forces(self,load_mass : float,x_velocity : float,y_velocity : float,pitch : float,altitude : float):
         velocity,velocity_angle = calculate_velocity_angle(x_velocity,y_velocity)
-        angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
         air_density = calculate_air_density(altitude)
         weight_force = self.calculate_weight_force(load_mass)
-        lift = self.structure.calculate_lift()
-        lift_induced_wing_drag = self.structure.calculate_induced_wing_drag(angle_of_attack)
+        x_lift,y_lift,x_drag,y_drag = self.calculate_lift_and_drag_x_y(velocity,velocity_angle,pitch,air_density)
+    
+    #calculate the x and y components of lift and drag
+    def calculate_lift_and_drag_x_y(self,velocity : float,velocity_angle : float,pitch : float,air_density : float) -> tuple[float,float,float,float]:
+        angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
+        lift = self.structure.calculate_lift(velocity,angle_of_attack,air_density)
+        lift_induced_wing_drag = self.structure.calculate_induced_wing_drag(velocity,angle_of_attack,air_density)
+        lift_induced_fuselage_drag = self.structure.calculate_fuselage_drag(velocity,angle_of_attack,air_density)
+        parasitic_drag = self.structure.calculate_parasitic_drag(velocity,air_density)
+        total_drag = lift_induced_fuselage_drag + lift_induced_wing_drag + parasitic_drag
+        y_drag = total_drag*math.sin(velocity_angle) #vertical component of drag
+        x_drag = total_drag*math.cos(velocity_angle) #horizontal component of drag
+        y_lift = lift*math.cos(velocity_angle) #vertical component of lift
+        x_lift = lift*math.sin(velocity_angle) #horizontal component of lift
+        return x_lift,y_lift,x_drag,y_drag
+
+    #displays a plot of how lift and drag vertical and horizontal components vary by pitch offset from the velocity angle
+    def plot_lift_drag_x_y_by_angle(self,velocity : float,velocity_angle : float,start_pitch_offset : float,end_pitch_offset : float,pitch_offset_increment : float,altitude : float):
+        angles = np.arange(velocity_angle+start_pitch_offset,velocity_angle+end_pitch_offset,pitch_offset_increment)
+        velocity_angle = math.radians(velocity_angle)
+        angles_degrees = list(angles)
+        angles : list[float] = list(np.radians(angles))
+        x_lifts : list[float] = []
+        y_lifts : list[float] = []
+        x_drags : list[float] = []
+        y_drags : list[float] = []
+        air_density = calculate_air_density(altitude)
+        for angle in angles:
+            x_lift,y_lift,x_drag,y_drag = self.calculate_lift_and_drag_x_y(velocity,velocity_angle,angle,air_density)
+            #print(x_lift,' ',y_lift,' ',x_drag,' ',y_drag)
+            x_lifts.append(x_lift)
+            y_lifts.append(y_lift)
+            x_drags.append(x_drag)
+            y_drags.append(y_drag)
+        #now plot
+        plt.figure(1)
+        plt.plot(angles_degrees,x_lifts)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('X Lift (N)')
+        plt.show(block=False)
+        plt.figure(2)
+        plt.plot(angles_degrees,y_lifts)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Y Lift (N)')
+        plt.show(block=False)
+        plt.figure(3)
+        plt.plot(angles_degrees,x_drags)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('X Drag (N)')
+        plt.show(block=False)
+        plt.figure(4)
+        plt.plot(angles_degrees,y_drags)
+        plt.xlabel('Angle (degrees)')
+        plt.ylabel('Y Drag (N)')
+        plt.show(block=False)
+        
 
 #some examples
 B787_structure = Structure(*B787_structure_statistics)
