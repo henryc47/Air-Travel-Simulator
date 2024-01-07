@@ -8,9 +8,10 @@ g = 9.807#for atmosphere calculations we are just going to assume g is a constan
 
 #airline statistics
 #structure_statistics = [empty_mass,wing_area,fuselage_length,fuselage_width,zero_lift_cd,lift_to_drag_ratio_linear,max_linear_angle_of_attack,max_linear_lift_coefficient,critical_lift_coefficient,critical_angle,angle_of_incidence]
-B787_structure_statistics = [120000,377,57,5.8,0.012,40,13,1.3,20,3]
+B787_structure_statistics = [129000,377,57,5.8,0.012,40,13,1.3,20,3]
 #engine_statistics = [fuel_energy,intake_efficiency,turbine_efficiency,air_fuel_ratio,bypass_ratio,max_thrust,max_thrust_density]
-B787_engine_statistics = [43,0.95,0.45,35,9,300,1.2]
+B787_engine_statistics = [43,0.95,0.45,35,9,320,1.2]
+#also note B787, max_fuel = 101'000kg, max_passenger = 400, mtow = 255'000kg
 #calculates the air density at specific latitudes 
 #Based off calculations  found here https://en.wikipedia.org/wiki/Barometric_formula#Density_equations
 #translated from an equivalent MATLAB calculator I built for my AMME2500 Assignment 3
@@ -55,7 +56,15 @@ class Plane():
         self.structure = structure
         self.engine = engine
         self.num_engines = num_engines
-        
+    
+    #calculate the weight force in N
+    def calculate_weight_force(self,load_mass):
+        weight_force = (load_mass+self.structure.empty_mass)*g
+        return weight_force
+    
+
+
+
 
 
 class Structure():
@@ -253,3 +262,4 @@ class Engine():
 #some examples
 B787_structure = Structure(*B787_structure_statistics)
 B787_engine = Engine(*B787_engine_statistics)
+B787 = Plane(B787_structure,B787_engine,2)
