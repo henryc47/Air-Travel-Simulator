@@ -254,13 +254,19 @@ class Plane():
         weight_force = (load_mass+self.structure.empty_mass)*g
         return weight_force
 
+
+
     #calculate x,y forces excluding thrust
-    def calculate_balance_of_forces(self,load_mass : float,x_velocity : float,y_velocity : float,pitch : float,altitude : float):
-        velocity,velocity_angle = calculate_velocity_angle(x_velocity,y_velocity)
+    def calculate_balance_of_forces_xy(self,load_mass : float,velocity : float,velocity_angle : float,pitch : float,altitude : float) -> tuple[float,float]:
         air_density = calculate_air_density(altitude)
         weight_force = self.calculate_weight_force(load_mass)
         x_lift,y_lift,x_drag,y_drag = self.calculate_lift_and_drag_x_y(velocity,velocity_angle,pitch,air_density)
+        net_x = -x_lift - x_drag
+        net_y = y_lift - y_drag - weight_force
+        return net_x,net_y
     
+    
+
     #calculate the x and y components of lift and drag
     def calculate_lift_and_drag_x_y(self,velocity : float,velocity_angle : float,pitch : float,air_density : float) -> tuple[float,float,float,float]:
         angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
