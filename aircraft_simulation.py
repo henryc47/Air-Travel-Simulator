@@ -15,10 +15,10 @@ B787_engine_statistics = [43,0.95,0.45,35,9,320,1.2]
 #calculates the air density at specific latitudes 
 #Based off calculations  found here https://en.wikipedia.org/wiki/Barometric_formula#Density_equations
 #translated from an equivalent MATLAB calculator I built for my AMME2500 Assignment 3
-def calculate_air_density(altitude):
+def calculate_air_density(altitude : float) -> float:
     molar_mass_air = 0.02896#molar mass of earths air, kg/mol
     R = 8.314;#the universal gas constant.
-    max_altitudes =[11000,20000,32000,47000,51000,71000,86000]#maximum altitude in atmospheric layers
+    max_altitudes = [11000,20000,32000,47000,51000,71000,86000]#maximum altitude in atmospheric layers
     temperature_lapse_rates = [-0.0065,0,0.001,0.0028,0,-0.0028,-0.002]#temperature lapse rate in that layer, K/m
     base_density = [1.225,0.36391,0.08803,0.01322,0.00143,0.00086,0.000064]#base density at bottom of each layer, kg/m^3
     base_temperature = [288.15,216.65,216.65,228.65,270.65,270.65,214.65]#temperature at the bottom of each layer, kelvin
@@ -48,7 +48,7 @@ def calculate_air_density(altitude):
             current_layer = current_layer+1#move up to next layer
     #we have run out of layers of the atmosphere, so we must be in space, where
     #air density is negligible
-    air_density = 0;
+    air_density = 0
     return air_density
 
 class Plane():
@@ -66,10 +66,9 @@ class Plane():
     def calculate_balance_of_forces(self,load_mass,x_velocity,y_velocity,pitch,altitude):
         weight_force = self.calculate_weight_force(load_mass)
         velocity_angle = self.structure.calculate_velocity_angle(x_velocity,y_velocity)
-
-
-
-
+        angle_of_attack = self.structure.calculate_angle_of_attack(pitch,velocity_angle)
+        air_density = calculate_air_density(altitude)
+        lift = self.structure.calculate_lift()
 
 
 
