@@ -12,9 +12,9 @@ class Simulation():
     #load all the airports from files in the airport folder
     def load_all_airports(self,airport_folder='airport_csvs'):
         self.create_airport_variables() #create the variables which store airport properties
-        airport_filenames = get_filenames_in_folder(airport_folder) #get every file in the airports folder
-        for airport_filename in airport_filenames: #load the airports from every file
-            self.load_airports(airport_filename)
+        airport_filepaths = get_filepaths_in_folder(airport_folder) #get every file in the airports folder
+        for airport_filepaths in airport_filepaths: #load the airports from every file
+            self.load_airports(airport_filepaths)
        
     
     #create the variables which store airport properties
@@ -34,21 +34,37 @@ class Simulation():
 
     #extract names,states,countries from a dataframe and store as appropriate
     def get_airport_names(self,df):
-        print(df.keys())
-        print("Name" in df)
-        print("State" in df)
-        new_airport_names = df["Name"]
-        new_airport_states = df["State"]
-        new_airport_countries = df["Country"]
-        print(new_airport_names)
-        print(new_airport_states)
-        print(new_airport_countries)
+        num_airports = len(df)
+        for i in range(num_airports):
+            name = convert_object_to_str(df.loc[i,"Name"])
+            state = convert_object_to_str(df.loc[i,"State"])
+            country = convert_object_to_str(df.loc[i,"Country"])
+            print("for i = ",i," name = ",name," state = ",state," country = ",country)
+        
+        
+        
     
-
-def get_filenames_in_folder(foldername : str) -> list[str]:
+#get the path to all files in a folder
+def get_filepaths_in_folder(foldername : str) -> list[str]:
     filenames : list[str] = []
     for filename in os.listdir(foldername):
         filename = os.path.join(foldername,filename)
         filenames.append(filename)
     
     return filenames
+
+#convert pandas object to string
+def convert_object_to_str(object) -> str:
+    if pd.isnull(object):
+         output : str = ""
+    else:
+        output : str = str(object)
+    
+    return output
+        
+
+
+
+if __name__ == "__main__":
+    s = Simulation()
+    s.load_all_airports()
