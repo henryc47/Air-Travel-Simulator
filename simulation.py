@@ -31,8 +31,20 @@ class Simulation():
     def load_airports(self,filename):
         df = pd.read_csv(filename)
         self.get_airport_names(df)
+        self.get_airport_coordinates(df)
 
-    #extract names,states,countries from a dataframe and store as appropriate
+    #extract coordinates of airports in a dataframe and store as appropriate
+    def get_airport_coordinates(self,df):
+        num_airports = len(df)
+        for i in range(num_airports):
+            location : str = convert_object_to_str(df.loc[i,"Location"])
+            coordinates = location.split(',')
+            latitude = coordinates[0]
+            longitude = coordinates[1]
+            self.airport_longitudes.append(longitude)
+            self.airport_latitudes.append(latitude)
+
+    #extract names,states,countries of airports in a dataframe and store as appropriate
     def get_airport_names(self,df):
         num_airports = len(df)
         for i in range(num_airports):
@@ -78,7 +90,7 @@ class Simulation():
     
     #display the data for a specific airport given by index
     def display_airport_data(self,index):
-        print(self.airport_names[index],",",self.airport_states[index],",",self.airport_countries[index])
+        print(self.airport_names[index],",",self.airport_states[index],",",self.airport_countries[index]," Lat = ",self.airport_latitudes[index]," Long = ",self.airport_longitudes[index])
         
     
 #get the path to all files in a folder
@@ -99,8 +111,6 @@ def convert_object_to_str(object) -> str:
     
     return output
         
-
-
 
 if __name__ == "__main__":
     s = Simulation()
