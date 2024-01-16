@@ -29,13 +29,13 @@ class Simulation():
 
     #load all the airports in one particular file
     def load_airports(self,filename):
-        df = pd.read_csv(filename)
+        df = pd.read_csv(filename,index_col=[0])
         print(df)
 
-
-
-
-
+    #extract names,states,countries from a dataframe and store as appropriate
+    def get_airport_names(self,df):
+        new_airport_names = 0
+    
 
 def get_filenames_in_folder(foldername : str) -> list[str]:
     filenames : list[str] = []
