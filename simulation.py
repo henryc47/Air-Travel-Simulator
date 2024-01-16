@@ -15,8 +15,8 @@ class Simulation():
         airport_filepaths = get_filepaths_in_folder(airport_folder) #get every file in the airports folder
         for airport_filepaths in airport_filepaths: #load the airports from every file
             self.load_airports(airport_filepaths)
+        self.store_coordinates_np()
        
-    
     #create the variables which store airport properties
     def create_airport_variables(self):
         self.airport_names : list[str] = [] #names of the airports
@@ -26,6 +26,10 @@ class Simulation():
         self.airport_name_indices_dict : dict[tuple[str,str,str],int] = {} #dictionary allowing fast lookup of index by unique name
         self.airport_longitudes : list[float] = [] #longitudes of the airports
         self.airport_latitudes : list[float] = [] #latitudes of the airports
+    
+    def store_coordinates_np(self):
+        self.airport_longitudes_np = np.array(self.airport_longitudes,dtype=np.float64)#longitude stored as a 1D numpy array
+        self.airport_latitudes_np = np.array(self.airport_latitudes,dtype=np.float64)#latitude stored as a 1D numpy array
 
     #load all the airports in one particular file
     def load_airports(self,filename):
@@ -90,7 +94,7 @@ class Simulation():
     
     #display the data for a specific airport given by index
     def display_airport_data(self,index):
-        print(self.airport_names[index],",",self.airport_states[index],",",self.airport_countries[index]," Lat = ",self.airport_latitudes[index]," Long = ",self.airport_longitudes[index])
+        print(self.airport_names[index],",",self.airport_states[index],",",self.airport_countries[index]," Lat = ",self.airport_latitudes_np[index]," Long = ",self.airport_longitudes_np[index])
         
     
 #get the path to all files in a folder
