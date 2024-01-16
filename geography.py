@@ -22,7 +22,7 @@ def get_great_circle_distance_array(latitude : np.ndarray,longitude : np.ndarray
         local_latitude = latitude[i]
         local_longitude = longitude[i]
         #get the great circle distance at each latitude/longitude combination
-        distance_array[i] = great_circle_distance(local_latitude,local_longitude,latitude,longitude)
+        distance_array[i] = get_great_circle_distance(local_latitude,local_longitude,latitude,longitude)
     
     return distance_array
 
