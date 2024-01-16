@@ -1,7 +1,8 @@
 import math as m
 import numpy as np
 import time
-#import multiprocessing as
+import multiprocessing as mp
+from multiprocessing import Pool
 
 radius = 6371;#radius of the earth in km, assuming a perfect sphere
 
@@ -13,11 +14,17 @@ def get_great_circle_distance(local_latitude,local_longitude,array_latitude,arra
     return distance
 
 #calculates the great circle distance between all point pairs in the provided array
-def get_great_circle_distance_array(latitude : np.ndarray,longitude : np.ndarray,verbose=True):
+def get_great_circle_distance_array(latitude : np.ndarray,longitude : np.ndarray,verbose=True,core_limit=-1):
+    if core_limit==-1:#no limit
+        core_limit = mp.cpu_count()-1 #by default leave 1 cpu free
+    
     length = len(latitude)#find how many locations are in our list, so we know how big to make the 2x2 zeros array
-    #print(length)
     distance_array = np.zeros((length,length),dtype=float)
-    #loop through all the latitude/longitude combinations
+    indices = list(range(length))
+    for i in indices:
+        local_latitude = latitude[i]
+        local_longitude = longitude[i]
+
     for i in range(length):
         local_latitude = latitude[i]
         local_longitude = longitude[i]
@@ -25,6 +32,7 @@ def get_great_circle_distance_array(latitude : np.ndarray,longitude : np.ndarray
         distance_array[i] = get_great_circle_distance(local_latitude,local_longitude,latitude,longitude)
     
     return distance_array
+
 
 def great_circle_test(num_examples,min_latitude,max_latitude,min_longitude,max_longitude):
     max_latitude = np.radians(max_latitude)
@@ -34,7 +42,7 @@ def great_circle_test(num_examples,min_latitude,max_latitude,min_longitude,max_l
     latitudes = (np.random.random_sample(size=num_examples)*(max_latitude-min_latitude))+min_latitude
     longitudes = (np.random.random_sample(size=num_examples)*(max_longitude-min_longitude))+min_longitude
     start_time = time.time()
-    output = great_circle_array(latitudes,longitudes)
+    output = get_great_circle_distance_array(latitudes,longitudes)
     end_time = time.time()
     print('time to calculate pairs of ',num_examples,' airports = ',(end_time-start_time),' seconds')
     print('result')
