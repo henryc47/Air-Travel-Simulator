@@ -1,7 +1,11 @@
+#external packages
 import pandas as pd
 import numpy as np
 import os
+import tqdm
+#other project files
 import geography as geo
+
 
 #simulation class to store the overall simulation
 class Simulation():
@@ -14,12 +18,13 @@ class Simulation():
     def load_all_airports(self,airport_folder='airport_csvs'):
         self.create_airport_variables() #create the variables which store airport properties
         airport_filepaths = get_filepaths_in_folder(airport_folder) #get every file in the airports folder
-        for airport_filepaths in airport_filepaths: #load the airports from every file
+        for airport_filepaths in tqdm.tqdm(airport_filepaths,desc="Loading Airport Data",disable=self.error_logging==False): #load the airports from every file
             self.load_airports(airport_filepaths)
         self.store_coordinates_np()
     
     def calculate_great_circle_distances(self):
-        geo.great_circle_ar
+        self.great_circle_distance_array = geo.get_great_circle_distance_array_degrees(self.airport_latitudes_np,self.airport_longitudes_np,self.error_logging)
+        print(np.round(self.great_circle_distance_array))
        
     #create the variables which store airport properties
     def create_airport_variables(self):
@@ -32,8 +37,8 @@ class Simulation():
         self.airport_latitudes : list[float] = [] #latitudes of the airports
     
     def store_coordinates_np(self):
-        self.airport_longitudes_np = np.array(self.airport_longitudes,dtype=np.float64)#longitude stored as a 1D numpy array
-        self.airport_latitudes_np = np.array(self.airport_latitudes,dtype=np.float64)#latitude stored as a 1D numpy array
+        self.airport_longitudes_np = np.array(self.airport_longitudes,dtype=float)#longitude stored as a 1D numpy array
+        self.airport_latitudes_np = np.array(self.airport_latitudes,dtype=float)#latitude stored as a 1D numpy array
 
     #load all the airports in one particular file
     def load_airports(self,filename):
@@ -123,4 +128,4 @@ def convert_object_to_str(object) -> str:
 if __name__ == "__main__":
     s = Simulation()
     s.load_all_airports()
-    s.display_all_airport_data()
+    s.calculate_great_circle_distances()

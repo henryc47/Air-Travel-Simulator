@@ -1,8 +1,7 @@
 import math as m
 import numpy as np
+import tqdm
 import time
-import multiprocessing as mp
-from multiprocessing import Pool
 
 radius = 6371;#radius of the earth in km, assuming a perfect sphere
 
@@ -13,26 +12,24 @@ def get_great_circle_distance(local_latitude,local_longitude,array_latitude,arra
     distance = radius*np.arccos((m.sin(local_latitude)*np.sin(array_latitude))+(m.cos(local_latitude)*np.cos(array_latitude)*np.cos(array_longitude-local_longitude)))
     return distance
 
+#wrapper for get_great_circle_distance_array, serving to convert degrees to radians
+def get_great_circle_distance_array_degrees(latitude : np.ndarray,longitude : np.ndarray,verbose=True):
+    latitude = np.radians(latitude)
+    longitude = np.radians(longitude)
+    distance_array = get_great_circle_distance_array(latitude,longitude,verbose=True)
+    return distance_array
+
 #calculates the great circle distance between all point pairs in the provided array
-def get_great_circle_distance_array(latitude : np.ndarray,longitude : np.ndarray,verbose=True,core_limit=-1):
-    if core_limit==-1:#no limit
-        core_limit = mp.cpu_count()-1 #by default leave 1 cpu free
-    
+def get_great_circle_distance_array(latitude : np.ndarray,longitude : np.ndarray,verbose=True):
     length = len(latitude)#find how many locations are in our list, so we know how big to make the 2x2 zeros array
     distance_array = np.zeros((length,length),dtype=float)
-    indices = list(range(length))
-    for i in indices:
-        local_latitude = latitude[i]
-        local_longitude = longitude[i]
-
-    for i in range(length):
+    for i in tqdm.tqdm(range(length),desc="Calculating Great Circle Distances",disable = verbose==False):
         local_latitude = latitude[i]
         local_longitude = longitude[i]
         #get the great circle distance at each latitude/longitude combination
         distance_array[i] = get_great_circle_distance(local_latitude,local_longitude,latitude,longitude)
     
     return distance_array
-
 
 def great_circle_test(num_examples,min_latitude,max_latitude,min_longitude,max_longitude):
     max_latitude = np.radians(max_latitude)
