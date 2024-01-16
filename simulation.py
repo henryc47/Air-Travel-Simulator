@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import geography as geo
 
 #simulation class to store the overall simulation
 class Simulation():
@@ -16,6 +17,9 @@ class Simulation():
         for airport_filepaths in airport_filepaths: #load the airports from every file
             self.load_airports(airport_filepaths)
         self.store_coordinates_np()
+    
+    def calculate_great_circle_distances(self):
+        geo.great_circle_ar
        
     #create the variables which store airport properties
     def create_airport_variables(self):
