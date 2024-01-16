@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 
 #simulation class to store the overall simulation
@@ -8,18 +9,38 @@ class Simulation():
         pass
 
 
-    #load all the airports in the airport folder
-    def load_airports(self,airport_folder='airport_csvs'):
-        airport_filenames = get_filenames_in_folder(airport_folder)
-        print(airport_filenames)
+    #load all the airports from files in the airport folder
+    def load_all_airports(self,airport_folder='airport_csvs'):
+        self.create_airport_variables() #create the variables which store airport properties
+        airport_filenames = get_filenames_in_folder(airport_folder) #get every file in the airports folder
+        for airport_filename in airport_filenames: #load the airports from every file
+            self.load_airports(airport_filename)
+       
+    
+    #create the variables which store airport properties
+    def create_airport_variables(self):
+        self.airport_names : list[str] = [] #names of the airports
+        self.airport_states : list[str] = [] #states of the airports
+        self.airport_countries : list[str] = [] #countries of the airports
+        self.airport_unique_names : list[tuple[str,str,str]] = [] #unique name of the airport, including name, state and country
+        self.airport_name_indexs_dict : dict[tuple[str,str,str],int] = {} #dictionary allowing fast lookup of index by unique name
+        self.airport_longitudes : list[float] = [] #longitudes of the airports
+        self.airport_latitudes : list[float] = [] #latitudes of the airports
+
+    #load all the airports in one particular file
+    def load_airports(self,filename):
+        df = pd.read_csv(filename)
+        print(df)
 
 
 
 
 
-def get_filenames_in_folder(foldername):
-    filenames = []
+
+def get_filenames_in_folder(foldername : str) -> list[str]:
+    filenames : list[str] = []
     for filename in os.listdir(foldername):
+        filename = os.path.join(foldername,filename)
         filenames.append(filename)
     
     return filenames
