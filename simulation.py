@@ -21,11 +21,14 @@ class Simulation():
         for airport_filepaths in tqdm.tqdm(airport_filepaths,desc="Loading Airport Data",disable=self.error_logging==False): #load the airports from every file
             self.load_airports(airport_filepaths)
         self.store_coordinates_np()
-    
+
     def calculate_great_circle_distances(self):
         self.great_circle_distance_array = geo.get_great_circle_distance_array_degrees(self.airport_latitudes_np,self.airport_longitudes_np,self.error_logging)
-        print(np.round(self.great_circle_distance_array))
-       
+    
+    #metric defining how willingness to travel scales with distance, at the moment just using a reciprocal square metric
+    def calculate_distance_metric(self):
+        self.distance_metric_array =  np.reciprocal(np.square(self.great_circle_distance_array))
+
     #create the variables which store airport properties
     def create_airport_variables(self):
         self.airport_names : list[str] = [] #names of the airports
@@ -35,6 +38,8 @@ class Simulation():
         self.airport_name_indices_dict : dict[tuple[str,str,str],int] = {} #dictionary allowing fast lookup of index by unique name
         self.airport_longitudes : list[float] = [] #longitudes of the airports
         self.airport_latitudes : list[float] = [] #latitudes of the airports
+        self.airport_populations : list[float] = [] #population (k) in airports catchment region
+        self.airport_gdp_per_heads : list[float] = [] #gdp per head ($k USD) in airports catchment region
     
     def store_coordinates_np(self):
         self.airport_longitudes_np = np.array(self.airport_longitudes,dtype=float)#longitude stored as a 1D numpy array
@@ -45,6 +50,7 @@ class Simulation():
         df = pd.read_csv(filename)
         self.get_airport_names(df)
         self.get_airport_coordinates(df)
+        self.get_airport_economics(df)
 
     #extract coordinates of airports in a dataframe and store as appropriate
     def get_airport_coordinates(self,df):
@@ -72,6 +78,16 @@ class Simulation():
             index : int = len(self.airport_names)-1
             self.airport_name_indices_dict[unique_name] = index
     
+    def get_airport_economics(self,df):
+        num_airports = len(df)
+        for i in range(num_airports):
+            airport_population = float(df.loc[i,"Population (k)"])
+            airport_gdp_per_captia = float(df.loc[i,"GDP/head ($k)"])
+            self.airport_populations.append(airport_population)
+            
+
+            
+
     #get the index of an airport from it's unique name
     def get_airport_index(self,unique_name) -> tuple[bool,int]:
         index = -1
@@ -115,17 +131,17 @@ def get_filepaths_in_folder(foldername : str) -> list[str]:
     
     return filenames
 
-#convert pandas object to string
+#convert pandas object to string, converting null to empty string
 def convert_object_to_str(object) -> str:
     if pd.isnull(object):
          output : str = ""
     else:
         output : str = str(object)
     
-    return output
-        
+    return output   
 
 if __name__ == "__main__":
     s = Simulation()
     s.load_all_airports()
     s.calculate_great_circle_distances()
+    s.calculate_distance_metric()
