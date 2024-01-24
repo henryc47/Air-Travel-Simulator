@@ -13,7 +13,6 @@ class Simulation():
     def __init__(self):
         self.error_logging = True
 
-
     #load all the airports from files in the airport folder
     def load_all_airports(self,airport_folder='airport_csvs'):
         self.create_airport_variables() #create the variables which store airport properties
@@ -28,13 +27,32 @@ class Simulation():
         self.calculate_great_circle_distances()
         self.calculate_distance_metric()
         self.calculate_economic_data()
+        self.km_per_mil = 100#annual passenger (thousand)km per million dollars GDP, typically about 5'000km per pax per 50k so 100'000 is normal, this will be broke into categories later
+        self.constant_km = 50#extra km's added onto each trip
+
+    #calculate travel demand between all origin destination pairs
+    def calculate_travel_demand(self):
+        num_airports = len(self.airport_gdps_np)
+        all_total_demand_to_others = []
+        for i in tqdm.tqdm(range(num_airports),desc="Calculating Origin-Destination Travel Demand Between City Pairs",disable=self.error_logging==False): #calculate origin-destination travel demand
+            relative_demand_to_others = self.airport_gdps_np*self.distance_metric_array[i,:]
+            relative_demand_to_others[i] = 0 #remove demand to self
+            total_relative_demand = np.sum(relative_demand_to_others)
+            demand_fraction_to_others = relative_demand_to_others/total_relative_demand #calculate the fraction of demand from a origin going to each destination
+            distance_adjusted_demand_fraction_to_others = np.divide(demand_fraction_to_others,self.great_circle_distance_array[i,:]+self.constant_km)
+            distance_adjusted_demand_fraction_to_others[i] = 0 #remove demand to self
+            total_demand = self.km_per_mil*self.airport_gdps_np[i]#total annual long distance passenger demand, in pax-km
+            total_demand_to_others = distance_adjusted_demand_fraction_to_others*total_demand #total demand to each city, k pax/year
+            all_total_demand_to_others.append(total_demand_to_others)
+        
+        self.all_demand_pairs_np = np.row_stack(all_total_demand_to_others)
 
     def calculate_great_circle_distances(self):
         self.great_circle_distance_array = geo.get_great_circle_distance_array_degrees(self.airport_latitudes_np,self.airport_longitudes_np,self.error_logging)
     
-    #metric defining how willingness to travel scales with distance, at the moment just using a reciprocal square metric
+    #metric defining how willingness to travel (total km*pax to destination given all else equal) scales with distance, at the moment just using a reciprocal metric (so km traveled declines linerally with total km)
     def calculate_distance_metric(self):
-        self.distance_metric_array =  np.reciprocal(np.square(self.great_circle_distance_array))
+        self.distance_metric_array =  np.reciprocal((self.great_circle_distance_array+50))
 
     #calculate all economic parameters relating to aircraft catchment area
     def calculate_economic_data(self):
@@ -141,7 +159,14 @@ class Simulation():
     def display_airport_data(self,index):
         print(self.airport_names[index],",",self.airport_states[index],",",self.airport_countries[index]," Lat = ",self.airport_latitudes_np[index]," Long = ",self.airport_longitudes_np[index],
               " GDP per captia = ",self.airport_gdp_per_heads_np[index]," Population = ",self.airport_populations_np[index]," GDP = ",self.airport_gdps_np[index])
-            
+    
+def display_matrix_data(data):
+    shape = data.shape
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            print(int(data[i,j]),end=" ")
+        print()
+
 #get the path to all files in a folder
 def get_filepaths_in_folder(foldername : str) -> list[str]:
     filenames : list[str] = []
@@ -164,4 +189,5 @@ if __name__ == "__main__":
     s = Simulation()
     s.load_all_airports()
     s.calculate_airport_statistics()
+    s.calculate_travel_demand()
     s.display_all_airport_data()
