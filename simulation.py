@@ -21,6 +21,7 @@ class Simulation():
         for airport_filepaths in tqdm.tqdm(airport_filepaths,desc="Loading Airport Data",disable=self.error_logging==False): #load the airports from every file
             self.load_airports(airport_filepaths)
         self.store_coordinates_np()
+        self.store_economics_np()
 
     def calculate_great_circle_distances(self):
         self.great_circle_distance_array = geo.get_great_circle_distance_array_degrees(self.airport_latitudes_np,self.airport_longitudes_np,self.error_logging)
@@ -41,9 +42,15 @@ class Simulation():
         self.airport_populations : list[float] = [] #population (k) in airports catchment region
         self.airport_gdp_per_heads : list[float] = [] #gdp per head ($k USD) in airports catchment region
     
+    #store the coordinates of airports in a numpy array
     def store_coordinates_np(self):
         self.airport_longitudes_np = np.array(self.airport_longitudes,dtype=float)#longitude stored as a 1D numpy array
         self.airport_latitudes_np = np.array(self.airport_latitudes,dtype=float)#latitude stored as a 1D numpy array
+
+    #store economic statistics about airport catchment zones in a numpy array
+    def store_economics_np(self):
+        self.airport_populations_np = np.array(self.airport_populations)
+        self.airport_gdp_per_heads_np = np.array(self.airport_gdp_per_heads)
 
     #load all the airports in one particular file
     def load_airports(self,filename):
@@ -84,7 +91,9 @@ class Simulation():
             airport_population = float(df.loc[i,"Population (k)"])
             airport_gdp_per_captia = float(df.loc[i,"GDP/head ($k)"])
             self.airport_populations.append(airport_population)
-            
+            self.airport_gdp_per_heads.append(airport_gdp_per_captia)
+
+
 
             
 
