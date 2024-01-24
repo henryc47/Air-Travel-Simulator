@@ -191,3 +191,4 @@ if __name__ == "__main__":
     s.calculate_airport_statistics()
     s.calculate_travel_demand()
     s.display_all_airport_data()
+    display_matrix_data(s.all_demand_pairs_np)
