@@ -61,7 +61,6 @@ class Command_Line_Interface():
         self.display_options(help,self.base_cli_options)
         return False
 
-
     #exit the program, after checking conditions (at the moment we just ask them if they really want to leave)
     def exit(self,help,additional_prompt):
         if help:
@@ -119,7 +118,6 @@ class Command_Line_Interface():
                 else:
                     print(word, " is not a valid option. To see a list of valid options, enter options")
             return False
-
 
 if __name__ == "__main__":
     CLI = Command_Line_Interface()
