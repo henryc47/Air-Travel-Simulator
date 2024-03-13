@@ -216,7 +216,7 @@ class Simulation():
     
     #check if start and end nodes are both existing unique airports, if so add them to the relevant data structures
     def check_road_nodes_valid(self,start_name : tuple[str,str,str],end_name : tuple[str,str,str],row : int) -> bool:
-        valid = True
+        valid : bool = True
         if (start_name not in self.airport_name_indices_dict):
             self.error_print("Node = " + unique_airport_name_to_str(start_name) + " is not a valid airport at row " + str(row+2))
             valid = False
@@ -230,23 +230,28 @@ class Simulation():
             return valid
         else:
             #look up the index of the start and end node
-            node_start_index = self.airport_name_indices_dict[start_name]
-            node_end_index = self.airport_name_indices_dict[end_name]
+            node_start_index : int = self.airport_name_indices_dict[start_name]
+            node_end_index : int = self.airport_name_indices_dict[end_name]
             #create a unique name for the road in both start-end and end-start format
-            road_name_forward = (start_name[0],start_name[1],start_name[2],end_name[0],end_name[1],end_name[2])
-            road_name_reverse = (end_name[0],end_name[1],end_name[2],start_name[0],start_name[1],start_name[2])
+            road_name_forward : tuple[str,str,str,str,str,str] = (start_name[0],start_name[1],start_name[2],end_name[0],end_name[1],end_name[2])
+            road_name_reverse : tuple[str,str,str,str,str,str] = (end_name[0],end_name[1],end_name[2],start_name[0],start_name[1],start_name[2])
             #if start and end node airports are both valid and unique, store their detail in the road data structures
             self.start_unique_name.append(start_name) 
-            self.end_unique_name.append(end_name)   
+            self.end_unique_name.append(end_name)
+            self.start_indices.append(node_start_index)
+            self.end_indices.append(node_end_index)   
             self.road_name_forward.append(road_name_forward) 
             self.road_name_reverse.append(road_name_reverse) 
             road_index : int = len(self.start_unique_name)-1 
             self.road_name_forward_indices_dict[road_name_forward] = road_index 
             self.road_name_reverse_indices_dict[road_name_reverse] = road_index
+            #implement road network creation by name and index here
+            #self.attached_nodes_dict
+            #self.attached_nodes_dict_int
             return valid
             
     #print an error message if we have error logging enabled
-    def error_print(self,message) -> None:
+    def error_print(self,message : str) -> None:
         if self.error_logging:
             print("ERROR : ",message)
         
