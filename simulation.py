@@ -182,10 +182,12 @@ class Simulation():
         self.ferry_id : list[int] = [] #what is the id of the ferry (global id)
         self.road_name_forward : list[tuple[str,str,str,str,str,str]] = []#unique name with start-end format
         self.road_name_reverse : list[tuple[str,str,str,str,str,str]] = []#unique name with end-start format
-        self.road_name_forward_indices_dict : dict[tuple[str,str,str,str,str,str],int] = {} #dictionary allowing fast lookup of index by unique name with start-end format
-        self.road_name_reverse_indices_dict : dict[tuple[str,str,str,str,str,str],int] = {} #dictionary allowing fast lookup of index by unique name with end-start format
-        self.attached_nodes_dict : dict[tuple[str,str,str],list[int]] = {} #dictionary allowing fast lookup of nodes (indice) connected to a node recorded by unique name
-        self.attached_nodes_dict_int : dict[int,list[int]] = {}#as above, but with starting node recorded with int
+        self.road_start_end_indices_dict : dict[tuple[int,int],int] = {} #dictionary allowing fast lookup of road index by start-end node index
+        self.road_end_start_indices_dict : dict[tuple[int,int],int] = {} #dictionary allowing fast lookup of road index by end-start node index
+        self.road_name_forward_indices_dict : dict[tuple[str,str,str,str,str,str],int] = {} #dictionary allowing fast lookup of road index by unique name with start-end format
+        self.road_name_reverse_indices_dict : dict[tuple[str,str,str,str,str,str],int] = {} #dictionary allowing fast lookup of road index by unique name with end-start format
+        self.attached_nodes_dict : dict[tuple[str,str,str],list[tuple[int,int]]] = {} #dictionary allowing fast lookup of nodes (indice) and connecting road connected to a node recorded by unique name
+        self.attached_nodes_dict_int : dict[int,list[tuple[int,int]]] = {}#as above, but with starting node and road recorded with index
 
     def load_roads(self,filepath) -> None:
         df = pd.read_csv(filepath)
@@ -232,9 +234,11 @@ class Simulation():
             #look up the index of the start and end node
             node_start_index : int = self.airport_name_indices_dict[start_name]
             node_end_index : int = self.airport_name_indices_dict[end_name]
-            #create a unique name for the road in both start-end and end-start format
+            #create a unique name for the road in both start-end and end-start format, also store the related indices
             road_name_forward : tuple[str,str,str,str,str,str] = (start_name[0],start_name[1],start_name[2],end_name[0],end_name[1],end_name[2])
             road_name_reverse : tuple[str,str,str,str,str,str] = (end_name[0],end_name[1],end_name[2],start_name[0],start_name[1],start_name[2])
+            road_node_indices_forward : tuple[int,int] = (node_start_index,node_end_index)
+            road_node_indices_reverse : tuple[int,int] = (node_end_index,node_start_index)
             #if start and end node airports are both valid and unique, store their detail in the road data structures
             self.start_unique_name.append(start_name) 
             self.end_unique_name.append(end_name)
@@ -242,12 +246,24 @@ class Simulation():
             self.end_indices.append(node_end_index)   
             self.road_name_forward.append(road_name_forward) 
             self.road_name_reverse.append(road_name_reverse) 
-            road_index : int = len(self.start_unique_name)-1 
+            road_index : int = len(self.start_unique_name)-1
+            self.road_start_end_indices_dict[road_node_indices_forward] = road_index
+            self.road_end_start_indices_dict[road_node_indices_reverse] = road_index 
             self.road_name_forward_indices_dict[road_name_forward] = road_index 
             self.road_name_reverse_indices_dict[road_name_reverse] = road_index
             #implement road network creation by name and index here
-            #self.attached_nodes_dict
-            #self.attached_nodes_dict_int
+            #starting at start node
+            if node_start_index not in self.attached_nodes_dict_int:
+                self.attached_nodes_dict_int[node_start_index] = []
+                self.attached_nodes_dict[start_name] = []
+            self.attached_nodes_dict_int[node_start_index].append((node_end_index,road_index))
+            self.attached_nodes_dict[start_name].append((node_end_index,road_index))
+            #starting at end node             
+            if node_end_index not in self.attached_nodes_dict_int:
+                self.attached_nodes_dict_int[node_end_index] = []
+                self.attached_nodes_dict[end_name] = []
+            self.attached_nodes_dict_int[node_end_index].append((node_start_index,road_index))
+            self.attached_nodes_dict[end_name].append((node_start_index,road_index))  
             return valid
             
     #print an error message if we have error logging enabled
@@ -292,10 +308,10 @@ def convert_object_to_str(object) -> str:
     
     return output   
 
-
 if __name__ == "__main__":
     s = Simulation()
     s.load_all_airports()
+    s.load_all_roads()
     s.calculate_airport_statistics()
     s.calculate_travel_demand()
     #s.display_all_airport_data()
