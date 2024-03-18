@@ -35,7 +35,7 @@ class Simulation():
         num_airports = len(self.airport_gdps_np)
         all_total_demand_to_others = []
         for i in tqdm.tqdm(range(num_airports),desc="Calculating Origin-Destination Travel Demand Between City Pairs",disable=self.error_logging==False): #calculate origin-destination travel demand
-            relative_demand_to_others = self.airport_gdps_np*self.distance_metric_array[i,:]
+            relative_demand_to_others = self.airport_gdps_np*self.road_distance_metric_array[i,:]
             relative_demand_to_others[i] = 0 #remove demand to self
             total_relative_demand = np.sum(relative_demand_to_others)
             demand_fraction_to_others = relative_demand_to_others/total_relative_demand #calculate the fraction of demand from a origin going to each destination
@@ -52,7 +52,7 @@ class Simulation():
     
     #metric defining how willingness to travel (total km*pax to destination given all else equal) scales with distance, at the moment just using a reciprocal metric (so km traveled declines linerally with total km)
     def calculate_distance_metric(self):
-        self.distance_metric_array =  np.reciprocal((self.great_circle_distance_array+50))
+        self.road_distance_metric_array =  np.reciprocal((self.great_circle_distance_array+50))
 
     #calculate all economic parameters relating to aircraft catchment area
     def calculate_economic_data(self):
@@ -214,25 +214,25 @@ class Simulation():
 
     #create the variables which store road properties
     def create_road_variables(self) -> None:
-        self.start_unique_name : list[tuple[str,str,str]] = [] #start node unique name
-        self.end_unique_name : list[tuple[str,str,str]] = [] #end node unique name
-        self.start_indices : list[int] = [] #start node indices
-        self.end_indices : list[int] = [] #end node indices
-        self.distance : list[float] = [] #distance in km
-        self.speed : list[float] = [] #travel speed in km/h
-        self.time : list[float] = [] #default travel time, hrs
-        self.extra_time : list[float] = [] #extra time, hrs
-        self.extra_cost : list[float] = [] #extra travel cost, $
-        self.type : list[str] = [] #what type of road are we (road or road + ferry)
-        self.ferry_id : list[int] = [] #what is the id of the ferry (global id)
+        self.road_start_unique_name : list[tuple[str,str,str]] = [] #start node unique name
+        self.road_end_unique_name : list[tuple[str,str,str]] = [] #end node unique name
+        self.road_start_indices : list[int] = [] #start node indices
+        self.road_end_indices : list[int] = [] #end node indices
+        self.road_distance : list[float] = [] #distance in km
+        self.road_speed : list[float] = [] #travel speed in km/h
+        self.road_time : list[float] = [] #default travel time, hrs
+        self.road_extra_time : list[float] = [] #extra time, hrs
+        self.road_extra_cost : list[float] = [] #extra travel cost, $
+        self.road_has_ferry : list[bool] = [] #does the road have a ferry
+        self.road_ferry_index : list[int] = [] #what is the index of the roads ferry
         self.road_name_forward : list[tuple[str,str,str,str,str,str]] = []#unique name with start-end format
         self.road_name_reverse : list[tuple[str,str,str,str,str,str]] = []#unique name with end-start format
         self.road_start_end_indices_dict : dict[tuple[int,int],int] = {} #dictionary allowing fast lookup of road index by start-end node index
         self.road_end_start_indices_dict : dict[tuple[int,int],int] = {} #dictionary allowing fast lookup of road index by end-start node index
         self.road_name_forward_indices_dict : dict[tuple[str,str,str,str,str,str],int] = {} #dictionary allowing fast lookup of road index by unique name with start-end format
         self.road_name_reverse_indices_dict : dict[tuple[str,str,str,str,str,str],int] = {} #dictionary allowing fast lookup of road index by unique name with end-start format
-        self.attached_nodes_dict : dict[tuple[str,str,str],list[tuple[int,int]]] = {} #dictionary allowing fast lookup of nodes (indice) and connecting road connected to a node recorded by unique name
-        self.attached_nodes_dict_int : dict[int,list[tuple[int,int]]] = {}#as above, but with starting node and road recorded with index
+        self.road_attached_nodes_dict : dict[tuple[str,str,str],list[tuple[int,int]]] = {} #dictionary allowing fast lookup of nodes (indice) and connecting road connected to a node recorded by unique name
+        self.road_attached_nodes_dict_int : dict[int,list[tuple[int,int]]] = {}#as above, but with starting node and road recorded with index
 
     def load_roads(self,filepath : str) -> None:
         df = pd.read_csv(filepath)
@@ -241,7 +241,12 @@ class Simulation():
             self.error_print("Not all roads are valid airport pairs, terminating early")
             return
         else:
-            self.get_road_statistics(df)
+            ferries_valid = self.link_roads_with_ferries(df)
+            if not ferries_valid:
+                self.error_print("Some roads have invalid ferries, terminating early")
+                return
+            else:
+                self.get_road_statistics(df)
 
     #extract names,states,countries of start and end nodes of roads in a dataframe and store as appropriate, return a boolean which will be false if not possible for all nodes
     def get_road_names(self,df : pd.DataFrame) -> bool:
@@ -285,32 +290,42 @@ class Simulation():
             road_node_indices_forward : tuple[int,int] = (node_start_index,node_end_index)
             road_node_indices_reverse : tuple[int,int] = (node_end_index,node_start_index)
             #if start and end node airports are both valid and unique, store their detail in the road data structures
-            self.start_unique_name.append(start_name) 
-            self.end_unique_name.append(end_name)
-            self.start_indices.append(node_start_index)
-            self.end_indices.append(node_end_index)   
+            self.road_start_unique_name.append(start_name) 
+            self.road_end_unique_name.append(end_name)
+            self.road_start_indices.append(node_start_index)
+            self.road_end_indices.append(node_end_index)   
             self.road_name_forward.append(road_name_forward) 
             self.road_name_reverse.append(road_name_reverse) 
-            road_index : int = len(self.start_unique_name)-1
+            road_index : int = len(self.road_start_unique_name)-1
             self.road_start_end_indices_dict[road_node_indices_forward] = road_index
             self.road_end_start_indices_dict[road_node_indices_reverse] = road_index 
             self.road_name_forward_indices_dict[road_name_forward] = road_index 
             self.road_name_reverse_indices_dict[road_name_reverse] = road_index
             #implement road network creation by name and index here
             #starting at start node
-            if node_start_index not in self.attached_nodes_dict_int:
-                self.attached_nodes_dict_int[node_start_index] = []
-                self.attached_nodes_dict[start_name] = []
-            self.attached_nodes_dict_int[node_start_index].append((node_end_index,road_index))
-            self.attached_nodes_dict[start_name].append((node_end_index,road_index))
+            if node_start_index not in self.road_attached_nodes_dict_int:
+                self.road_attached_nodes_dict_int[node_start_index] = []
+                self.road_attached_nodes_dict[start_name] = []
+            self.road_attached_nodes_dict_int[node_start_index].append((node_end_index,road_index))
+            self.road_attached_nodes_dict[start_name].append((node_end_index,road_index))
             #starting at end node             
-            if node_end_index not in self.attached_nodes_dict_int:
-                self.attached_nodes_dict_int[node_end_index] = []
-                self.attached_nodes_dict[end_name] = []
-            self.attached_nodes_dict_int[node_end_index].append((node_start_index,road_index))
-            self.attached_nodes_dict[end_name].append((node_start_index,road_index))  
+            if node_end_index not in self.road_attached_nodes_dict_int:
+                self.road_attached_nodes_dict_int[node_end_index] = []
+                self.road_attached_nodes_dict[end_name] = []
+            self.road_attached_nodes_dict_int[node_end_index].append((node_start_index,road_index))
+            self.road_attached_nodes_dict[end_name].append((node_start_index,road_index))  
             return valid
     
+    #link roads with ferries
+    def link_roads_with_ferries(self,df : pd.DataFrame) -> bool:
+        num_roads = len(df)
+        all_ferries_valid = True
+        for i in range(num_roads):
+            has_ferry_str : str = convert_object_to_str(df.loc[i,"Has Ferry"])
+            has_ferry : bool = has_ferry_str.lower()=="yes"
+            #self.road_
+
+
     #load other statistics relating to a road 
     def get_road_statistics(self, df : pd.DataFrame) -> None:
         pass
