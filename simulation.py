@@ -221,8 +221,6 @@ class Simulation():
         self.road_distance : list[float] = [] #distance in km
         self.road_speed : list[float] = [] #travel speed in km/h
         self.road_time : list[float] = [] #default travel time, hrs
-        self.road_extra_time : list[float] = [] #extra time, hrs
-        self.road_extra_cost : list[float] = [] #extra travel cost, $
         self.road_has_ferry : list[bool] = [] #does the road have a ferry
         self.road_ferry_index : list[list[int]] = [] #what is the index of the roads ferry
         self.road_name_forward : list[tuple[str,str,str,str,str,str]] = []#unique name with start-end format
@@ -345,9 +343,15 @@ class Simulation():
     
     #load other statistics relating to a road 
     def get_road_statistics(self, df : pd.DataFrame) -> None:
-        pass
-        
-
+        num_roads = len(df)
+        all_nodes_valid = True
+        for i in range(num_roads):
+            road_distance : float = float(df.loc[i,"Distance (km)"]) 
+            road_speed : float = float(df.loc[i,"Speed (km/h)"])
+            road_time : float = road_distance/road_speed
+            self.road_distance.append(road_distance)
+            self.road_speed.append(road_speed)
+            self.road_time.append(road_time)
 
     #print an error message if we have error logging enabled
     def error_print(self,message : str) -> None:
