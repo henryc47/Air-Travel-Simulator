@@ -224,7 +224,7 @@ class Simulation():
         self.road_extra_time : list[float] = [] #extra time, hrs
         self.road_extra_cost : list[float] = [] #extra travel cost, $
         self.road_has_ferry : list[bool] = [] #does the road have a ferry
-        self.road_ferry_index : list[int] = [] #what is the index of the roads ferry
+        self.road_ferry_index : list[list[int]] = [] #what is the index of the roads ferry
         self.road_name_forward : list[tuple[str,str,str,str,str,str]] = []#unique name with start-end format
         self.road_name_reverse : list[tuple[str,str,str,str,str,str]] = []#unique name with end-start format
         self.road_start_end_indices_dict : dict[tuple[int,int],int] = {} #dictionary allowing fast lookup of road index by start-end node index
@@ -323,9 +323,26 @@ class Simulation():
         for i in range(num_roads):
             has_ferry_str : str = convert_object_to_str(df.loc[i,"Has Ferry"])
             has_ferry : bool = has_ferry_str.lower()=="yes"
-            #self.road_
+            self.road_has_ferry.append(has_ferry)
+            if not has_ferry:
+                self.road_ferry_index.append([-1]) #default ferry index is -1
+            else:
+                ferry_names_raw = convert_object_to_str(df.loc[i,"Ferries"])
+                ferry_names : list[str] = ferry_names_raw.split(',')
+                ferry_indices : list[int] = []
+                for ferry_name in ferry_names:
+                    if ferry_name in self.ferry_id_by_name_dict:
+                        ferry_indices.append(self.ferry_id_by_name_dict[ferry_name])
+                    else:
+                        message = "Ferry Name = " + ferry_name + " is not a recorded ferry"
+                        self.error_print(message)
+                        ferry_indices.append(-1) #default ferry index is -1
+                        all_ferries_valid = False
+            
+                self.road_ferry_index.append(ferry_indices)
 
-
+        return all_ferries_valid
+    
     #load other statistics relating to a road 
     def get_road_statistics(self, df : pd.DataFrame) -> None:
         pass
