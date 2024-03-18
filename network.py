@@ -23,7 +23,6 @@ class Network():
         self.calculate_airport_statistics()
         self.calculate_travel_demand()
 
-    
     #load all the airports from files in the airport folder
     def load_all_airports(self,airport_folder='airport_csvs'):
         self.create_airport_variables() #create the variables which store airport properties
