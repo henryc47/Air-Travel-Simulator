@@ -144,13 +144,13 @@ class Simulation():
         self.display_unique_name(unique_name)
 
     #display an airport with unique combination of name,state and country, using a tuple to represent the combination
-    def display_unique_name(self,unique_name : str):
+    def display_unique_name(self,unique_name : str) -> None:
         found_airport,index = self.get_airport_index(unique_name)
         if found_airport:
             self.display_airport_data(index)
 
     #display the data for all airports
-    def display_all_airport_data(self):
+    def display_all_airport_data(self) -> None:
         num_airports = len(self.airport_names)
         for i in range(num_airports):
             self.display_airport_data(i)
@@ -160,7 +160,52 @@ class Simulation():
         print(self.airport_names[index],",",self.airport_states[index],",",self.airport_countries[index]," Lat = ",self.airport_latitudes_np[index]," Long = ",self.airport_longitudes_np[index],
               " GDP per captia = ",self.airport_gdp_per_heads_np[index]," Population = ",self.airport_populations_np[index]," GDP = ",self.airport_gdps_np[index])
 
-    #load all roads from files in the roads folder, note this must be done after airport creation
+    #load all ferries from files in the ferries folder
+    def load_all_ferries(self,ferry_folder='ferry_csvs') -> None:
+        self.create_ferry_variables() #create the variables which store ferry properties
+        ferry_filepaths = get_filepaths_in_folder(ferry_folder) #get every file in the ferry folder
+        for ferry_filepath in tqdm.tqdm(ferry_filepaths,desc="Loading Ferry Data",disable=self.error_logging==False): #load the ferries from every file
+            self.load_ferries(ferry_filepath)     
+
+    #create the variables which store ferry properties
+    def create_ferry_variables(self) -> None:
+        self.ferry_names : list[str] = []
+        self.ferry_id_by_name_dict : dict[str,int] = {}
+        self.ferry_transport_time : list[float] = [] #transport time hours
+        self.ferry_load_time_car : list[float] = [] #loading/unloading time for cars and buses
+        self.ferry_load_time_pax : list[float] = [] #loading/unloading time for non-vehicle passengers
+        self.ferry_car_cost : list[float] = [] #cost ($) for a car to use the ferry
+        self.ferry_pax_cost : list[float] = [] #cost ($) for single passengers (non-vehicle and bus) to use the ferry
+        self.ferry_frequency : list[int] = [] #ferry trips per week
+
+    #load all the ferries in a CSV file
+    def load_ferries(self,ferry_filepath : str) -> None:
+        df = pd.read_csv(ferry_filepath)
+        num_ferries = len(df)
+        for i in range(num_ferries):
+            name : str = convert_object_to_str(df.loc[i,"Ferry Name"])
+            transport_time : float = float(df.loc[i,"Transport Time"])
+            load_time_car : float = float(df.loc[i,"Car Load + Unload Time"])
+            load_time_pax : float = float(df.loc[i,"Pax Load Time"])
+            cost_car : float = float(df.loc[i,"Car Cost"])
+            pax_cost : float = float(df.loc[i,"Pax Cost"])
+            frequency : float = float(df.loc[i,"Frequency"])
+            self.ferry_names.append(name)
+            self.ferry_transport_time.append(transport_time)
+            self.ferry_load_time_car.append(load_time_car)
+            self.ferry_load_time_pax.append(load_time_pax)
+            self.ferry_car_cost.append(cost_car)
+            self.ferry_pax_cost.append(pax_cost)
+            self.ferry_frequency.append(frequency)
+            index = len(self.ferry_names)-1
+            #check if ferry is unique
+            if name in self.ferry_id_by_name_dict:
+                error_message = "Ferry name = " + name + " has already been used, ferry names must be unique"
+                self.error_print(error_message) 
+            else:
+                self.ferry_id_by_name_dict[name] = index
+
+    #load all roads from files in the roads folder, note this must be done after airport and ferry creation
     def load_all_roads(self,roads_folder='road_csvs'):
         self.create_road_variables() #create the variables which store airport properties
         roads_filepaths = get_filepaths_in_folder(roads_folder) #get every file in the roads folder
@@ -189,14 +234,14 @@ class Simulation():
         self.attached_nodes_dict : dict[tuple[str,str,str],list[tuple[int,int]]] = {} #dictionary allowing fast lookup of nodes (indice) and connecting road connected to a node recorded by unique name
         self.attached_nodes_dict_int : dict[int,list[tuple[int,int]]] = {}#as above, but with starting node and road recorded with index
 
-    def load_roads(self,filepath) -> None:
+    def load_roads(self,filepath : str) -> None:
         df = pd.read_csv(filepath)
         all_nodes_valid : bool = self.get_road_names(df)
         if not all_nodes_valid:
             self.error_print("Not all roads are valid airport pairs, terminating early")
             return
         else:
-            pass
+            self.get_road_statistics(df)
 
     #extract names,states,countries of start and end nodes of roads in a dataframe and store as appropriate, return a boolean which will be false if not possible for all nodes
     def get_road_names(self,df : pd.DataFrame) -> bool:
@@ -265,7 +310,13 @@ class Simulation():
             self.attached_nodes_dict_int[node_end_index].append((node_start_index,road_index))
             self.attached_nodes_dict[end_name].append((node_start_index,road_index))  
             return valid
-            
+    
+    #load other statistics relating to a road 
+    def get_road_statistics(self, df : pd.DataFrame) -> None:
+        pass
+        
+
+
     #print an error message if we have error logging enabled
     def error_print(self,message : str) -> None:
         if self.error_logging:
@@ -311,6 +362,7 @@ def convert_object_to_str(object) -> str:
 if __name__ == "__main__":
     s = Simulation()
     s.load_all_airports()
+    s.load_all_ferries()
     s.load_all_roads()
     s.calculate_airport_statistics()
     s.calculate_travel_demand()

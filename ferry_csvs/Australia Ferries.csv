@@ -1,0 +1,3 @@
+Ferry Name,Transport Time,Car Load + Unload Time,Pax Load Time,Car Cost,Pax Cost,Frequency,Distance (km)
+King Island,0.5,1.0,0.5,30,6,42,20
+Trans-Tasman,8.5,1.5,1.0,180,36,14,410
