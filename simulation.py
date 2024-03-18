@@ -12,7 +12,7 @@ class Simulation():
         self.error_logging : bool = True
     
     #setup the network class
-    def setup_network(self) -> None:
+    def setup_transport_network(self) -> None:
         self.network : net.Network = net.Network(self)
         self.network.setup_network()
 
@@ -35,4 +35,4 @@ def unique_road_name_to_str(unique_name : tuple[str,str,str,str,str,str]) -> str
 
 if __name__ == "__main__":
     s = Simulation()
-    s.setup_network()
+    s.setup_transport_network()
